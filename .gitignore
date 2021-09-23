@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+/.vs
+/SFML/.vs/SFML/v16
+/SFML/SFML/x64
