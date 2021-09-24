@@ -78,6 +78,7 @@ struct NW
 				for (int o = 0; o < S[l + 1]; o++)
 				{
 					Links[l][i][o] = (rand() / float(RAND_MAX) * 2 - 1) * 1;
+					//if (rand() % 4 == 0) Links[l][i][o] = 0;
 				}
 			}
 		}
@@ -123,13 +124,13 @@ uint32_t size = 1000;
 
 double x = 0, y = 0, a = 0, dx = 0, dy = 0, da = 0, a1 = 0, a2 = 0, p1 = 1, p2 = 1;
 
-const int Deep = 5;
+const int Deep = 4;
 
-int __SS[Deep]
+int __SS[10]
 {
 	4,
-	4,
-	3,
+	5,
+	5,
 	2,
 	2
 };
@@ -168,12 +169,12 @@ void Train()
 	dy += p2 * .1;
 	x += dx * 0.1;
 	y += dy * 0.1;
-	A.E[A.L - 1][0] = (tx - x) - dx * dx * dx * 0.1;
-	A.E[A.L - 1][1] = (ty - y) - dy * dy * dy * 0.1;
+	A.E[A.L - 1][0] = (tx - x) - dx * dx * dx;
+	A.E[A.L - 1][1] = (ty - y) - dy * dy * dy;
 
 	A.Train();
 
-	if (abs(y) > 2 || abs(x) > 2)
+	if (abs(y) > 2 || abs(x) > 2 || t % 500 == 0)
 	{
 		x = y = dx = dy = 0;
 	}
