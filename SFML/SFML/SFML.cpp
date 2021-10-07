@@ -1,13 +1,33 @@
-﻿// SFML.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
-//
-
-#include <iostream>
+﻿#include <iostream>
 #include <SFML/Graphics.hpp>
 #include<thread>
 #include<time.h>
 #include <ctime>
 #include <ratio>
 #include <chrono>
+
+const double PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679;
+
+const double A092676[]
+{
+	1,1,7,127,4369,34807,20036983,2280356863,49020204823,65967241200001
+};
+
+const double A092677[]
+{
+	1, 3, 30, 630, 22680, 178200, 97297200, 10216206000, 198486288000, 237588086736000
+};
+
+double inverf(double x)
+{
+	double tx = x, r = x;
+	for (int i = 1; i < 10; ++i)
+	{
+		tx *= x * x * PI;
+		r += tx * A092676[i] / A092677[i];
+	}
+	return r;
+}
 
 void TH_Delay(uint32_t ms)
 {
@@ -24,20 +44,19 @@ void Delay(int32_t ms)
 double Softsign(double x) { return (x > 0 ? x / (1 + x): x / (1 - x)); }
 double DSoftsign(double x) { return (x > 0 ? 1 / (1 + 2 * x + x * x) : 1 / (1 - 2 * x + x * x)); }
 
+double Tanh(double x) { return tanh(x); }
+double DTanh(double x) { double t = 1 / cosh(x); return t * t; }
+
 double ReLU(double x) { return (x > 0 ? x : 0.01 * x); }
 double DReLU(double x) { return (x > 0 ? 1 : 0.01); }
 
 
-double F(double x) { return ReLU(x); }
-double DF(double x) { return ReLU(x); }
-
-
 struct NW
 {
-	double (*F)(double x) = Softsign;
-	double (*DF)(double x) =  DSoftsign;
+	double (*F)(double x) = Tanh;
+	double (*DF)(double x) =  DTanh;
 
-	double **N, **B, **E, **D, A = 0.0002;
+	double **N, **B, **E, **D, A = 0.002;
 
 	double ***Links;
 
@@ -122,15 +141,15 @@ struct NW
 
 uint32_t size = 1000;
 
-double x = 0, y = 0, a = 0, dx = 0, dy = 0, da = 0, a1 = 0, a2 = 0, p1 = 1, p2 = 1;
+double x = 0, y = 0, a = 0, dx = 0, dy = 0, da = 0, ix = 0, iy = 0, a1 = 0, a2 = 0, p1 = 1, p2 = 1;
 
 const int Deep = 4;
 
 int __SS[10]
 {
+	9,
 	4,
-	5,
-	5,
+	4,
 	2,
 	2
 };
@@ -149,35 +168,54 @@ sf::Text Outs[4];
 
 double fps = 60;
 
+
+double ex = inverf(rand() / float(RAND_MAX) * 2 - 1);
+double ey = inverf(rand() / float(RAND_MAX) * 2 - 1) ;
+
+
 void Train()
 {
-	tx = cos(t * 0.00999216122);
-	ty = sin(t * 0.0198564215366);
+
+	if (abs(y) > 3 || abs(x) > 3 || t % 500 == 0)
+	{
+		x = y = dx = dy = ix = iy = 0;
+		A.N[A.L - 2][0] = A.N[A.L - 2][1] = A.N[A.L - 2][2] = A.N[A.L - 2][3] = 0;
+	}
+
+	tx = cos(t * 0.00999216122) + cos((t + 12) * 0.0066228562) * 0.5;
+	ty = sin(t * 0.0098564215366) + cos((t -651) * 0.0077251612165) * 0.5;
+	ex = ex * 0.9 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.1;
+	ey = ey * 0.9 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.1;
+	tx += ex * 0.0000333;
+	ty += ey * 0.0000333;
 	//x = 0;
 	//y = 0;
-	A.N[0][0] = tx - x;
-	A.N[0][1] = ty - y;
-	A.N[0][2] = dx;
-	A.N[0][3] = dy;
-
+	//A.N[A.L - 2][2] = A.N[A.L - 2][3] = A.N[A.L - 2][2] = A.N[A.L - 2][3] = 0;
+	A.N[0][0] = 1;
+	A.N[0][1] = tx - x;
+	A.N[0][2] = ty - y;
+	A.N[0][3] = 0;
+	A.N[0][4] = 0;
+	A.N[0][5] = A.N[A.L - 2][0];
+	A.N[0][6] = A.N[A.L - 2][1];
+	A.N[0][7] = A.N[A.L - 2][2];
+	A.N[0][8] = A.N[A.L - 2][3];
 
 	A.Upd();
 
 	p1 = A.N[A.L - 1][0];
 	p2 = A.N[A.L - 1][1];
-	dx += p1 * .1;
-	dy += p2 * .1;
+	dx += p1 * 0.1;
+	dy += p2 * 0.1;
 	x += dx * 0.1;
 	y += dy * 0.1;
+	ix = ix * 0.9 + (tx - x) * 0.1;
+	iy = iy * 0.9 + (ty - y) * 0.1;
 	A.E[A.L - 1][0] = (tx - x) - dx * dx * dx;
 	A.E[A.L - 1][1] = (ty - y) - dy * dy * dy;
 
 	A.Train();
 
-	if (abs(y) > 2 || abs(x) > 2 || t % 500 == 0)
-	{
-		x = y = dx = dy = 0;
-	}
 	t++;
 }
 
@@ -191,8 +229,8 @@ void MDraw()
 			float T = A.N[i][j];
 			Layers[i][j].setFillColor(
 				sf::Color(
-					(T > 0 ? 55+200 * T / (1 + T) : 55), 
-					(T < 0 ? 55-200 * T / (1 - T) : 55), 
+					(T < 0 ? 55+200 * abs(T) / (1 + abs(T)) : 55), 
+					(T > 0 ? 55+200 * abs(T) / (1 + abs(T)) : 55), 
 					(T == 0 ? 255 : 55)
 				) 
 			);
@@ -207,8 +245,8 @@ void MDraw()
 			{
 				float T = A.Links[l][i][o];
 				Links[l][i][o][0].color = Links[l][i][o][1].color = sf::Color(
-					(T > 0 ? 200: 0), 
-					(T < 0 ? 200 : 0), 
+					(T < 0 ? 200: 0), 
+					(T > 0 ? 200 : 0), 
 					(T == 0 ? 0 : 0),
 					abs(200 * T / (1 + abs(T)))
 				);
@@ -244,8 +282,8 @@ int main()
 	sf::Font font_arial;
 	//if (!font_arial.loadFromFile("arial.ttf"));
 	//{
-		//return 1;
-		// error...
+	//return 1;
+	// error...
 	//}
 
 	{
@@ -291,12 +329,12 @@ int main()
 
 	}
 
-    sf::ContextSettings setting;
-    setting.antialiasingLevel = 4;
-	
+	sf::ContextSettings setting;
+	setting.antialiasingLevel = 4;
+
 	sf::RenderWindow window(sf::VideoMode(size, size), "SFML works!",sf::Style::Default, setting);
-   
-    shape.setFillColor(sf::Color::Green);
+
+	shape.setFillColor(sf::Color::Green);
 	unit.setFillColor(sf::Color::Red);
 	Mid.setFillColor(sf::Color::Blue);
 
@@ -317,17 +355,17 @@ int main()
 	auto t2 = std::chrono::high_resolution_clock::now();
 	double adt = -1;
 	int __GG = 0;
-    while (window.isOpen())
-    {
-        sf::Event event;
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                window.close();
-        }
+	while (window.isOpen())
+	{
+		sf::Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+				window.close();
+		}
 
-        window.clear();
-        window.draw(shape);
+		window.clear();
+		window.draw(shape);
 		window.draw(unit);
 		window.draw(Mid);
 		//window.draw(Outs[0]);
@@ -358,24 +396,13 @@ int main()
 		t1 = std::chrono::high_resolution_clock::now();
 		adt = (adt < 0 ? 4 : adt * 0.9995 + dt * 0.0005);
 		std::cout << int(dt * 1000) << " " << int(adt * 1000) << " " << int(1000.0 / adt) << "        \r";
-		
+
 		Delay(std::max(1000 / fps - dt, 1.0));
 		window.display();
 		__GG++;
-		if (__GG == 50000)
+		if (__GG == 500000)
 			delay = 10000;
-    }
+	}
 	isWindowOpen = false;
-    return 0;
+	return 0;
 }
-
-// Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
-// Отладка программы: F5 или меню "Отладка" > "Запустить отладку"
-
-// Советы по началу работы 
-//   1. В окне обозревателя решений можно добавлять файлы и управлять ими.
-//   2. В окне Team Explorer можно подключиться к системе управления версиями.
-//   3. В окне "Выходные данные" можно просматривать выходные данные сборки и другие сообщения.
-//   4. В окне "Список ошибок" можно просматривать ошибки.
-//   5. Последовательно выберите пункты меню "Проект" > "Добавить новый элемент", чтобы создать файлы кода, или "Проект" > "Добавить существующий элемент", чтобы добавить в проект существующие файлы кода.
-//   6. Чтобы снова открыть этот проект позже, выберите пункты меню "Файл" > "Открыть" > "Проект" и выберите SLN-файл.
