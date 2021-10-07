@@ -33,3 +33,5 @@
 /.vs
 /SFML/.vs/SFML/v16
 /SFML/SFML/x64
+/SFML/TEster/x64/Release/TEster.tlog
+/SFML/TEster/x64/Release

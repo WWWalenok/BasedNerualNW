@@ -26,7 +26,7 @@ double inverf(double x)
 		tx *= x * x * PI;
 		r += tx * A092676[i] / A092677[i];
 	}
-	return r;
+	return r * 0.000149832;
 }
 
 void TH_Delay(uint32_t ms)
@@ -56,7 +56,7 @@ struct NW
 	double (*F)(double x) = Tanh;
 	double (*DF)(double x) =  DTanh;
 
-	double **N, **B, **E, **D, A = 0.002;
+	double **N, **B, **E, **D, A = 0.005;
 
 	double ***Links;
 
@@ -147,10 +147,10 @@ const int Deep = 4;
 
 int __SS[10]
 {
-	9,
-	4,
-	4,
-	2,
+	7,
+	6,
+	6,
+	6,
 	2
 };
 
@@ -175,31 +175,34 @@ double ey = inverf(rand() / float(RAND_MAX) * 2 - 1) ;
 
 void Train()
 {
-
+	float dt = 0.1 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.1;
 	if (abs(y) > 3 || abs(x) > 3 || t % 500 == 0)
 	{
 		x = y = dx = dy = ix = iy = 0;
-		A.N[A.L - 2][0] = A.N[A.L - 2][1] = A.N[A.L - 2][2] = A.N[A.L - 2][3] = 0;
+		for(int l = 0; l < A.L; l++)
+			for (int i = 0; i < A.S[l]; i++)
+			{
+				A.N[l][i] = A.E[l][i] = 0;
+			}
+
 	}
 
 	tx = cos(t * 0.00999216122) + cos((t + 12) * 0.0066228562) * 0.5;
 	ty = sin(t * 0.0098564215366) + cos((t -651) * 0.0077251612165) * 0.5;
-	ex = ex * 0.9 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.1;
-	ey = ey * 0.9 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.1;
-	tx += ex * 0.0000333;
-	ty += ey * 0.0000333;
+	ex = ex * 0.975 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.025;
+	ey = ey * 0.975 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.025;
+	tx += ex;
+	ty += ey;
 	//x = 0;
 	//y = 0;
 	//A.N[A.L - 2][2] = A.N[A.L - 2][3] = A.N[A.L - 2][2] = A.N[A.L - 2][3] = 0;
 	A.N[0][0] = 1;
 	A.N[0][1] = tx - x;
 	A.N[0][2] = ty - y;
-	A.N[0][3] = 0;
-	A.N[0][4] = 0;
-	A.N[0][5] = A.N[A.L - 2][0];
-	A.N[0][6] = A.N[A.L - 2][1];
-	A.N[0][7] = A.N[A.L - 2][2];
-	A.N[0][8] = A.N[A.L - 2][3];
+	A.N[0][3] = A.N[A.L - 1][2];
+	A.N[0][4] = A.N[A.L - 1][3];
+	A.N[0][5] = A.N[A.L - 1][4];
+	A.N[0][6] = A.N[A.L - 1][5];
 
 	A.Upd();
 
@@ -213,7 +216,10 @@ void Train()
 	iy = iy * 0.9 + (ty - y) * 0.1;
 	A.E[A.L - 1][0] = (tx - x) - dx * dx * dx;
 	A.E[A.L - 1][1] = (ty - y) - dy * dy * dy;
-
+	A.E[A.L - 1][2] = A.E[0][3] * 0.01 + (dx - A.N[A.L - 1][2]) * 0.01;
+	A.E[A.L - 1][3] = A.E[0][4] * 0.01 + (dy - A.N[A.L - 1][3]) * 0.01;
+	A.E[A.L - 1][4] = A.E[0][5] * 0.01 + (ix - A.N[A.L - 1][4]) * 0.01;
+	A.E[A.L - 1][5] = A.E[0][6] * 0.01 + (iy - A.N[A.L - 1][5]) * 0.01;
 	A.Train();
 
 	t++;
