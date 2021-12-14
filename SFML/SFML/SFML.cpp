@@ -5,29 +5,16 @@
 #include <ctime>
 #include <ratio>
 #include <chrono>
+#include <string>
 
 const double PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679;
 
-const double A092676[]
+double gausrand(double S = 1, double U = 0)
 {
-	1,1,7,127,4369,34807,20036983,2280356863,49020204823,65967241200001
-};
-
-const double A092677[]
-{
-	1, 3, 30, 630, 22680, 178200, 97297200, 10216206000, 198486288000, 237588086736000
-};
-
-double inverf(double x)
-{
-	double tx = x, r = x;
-	for (int i = 1; i < 10; ++i)
-	{
-		tx *= x * x * PI;
-		r += tx * A092676[i] / A092677[i];
-	}
-	return r * 0.000149832;
+	return sqrt(-2 * log((1 + rand()) / float(RAND_MAX + 1))) * cos(2 * PI * (rand() / float(RAND_MAX))) * S + U;
 }
+
+#define random (rand() / float(RAND_MAX))
 
 void TH_Delay(uint32_t ms)
 {
@@ -56,7 +43,7 @@ struct NW
 	double (*F)(double x) = Tanh;
 	double (*DF)(double x) =  DTanh;
 
-	double **N, **B, **E, **D, A = 0.005;
+	double **N, **B, **E, **D, A = 0.001;
 
 	double ***Links;
 
@@ -96,8 +83,8 @@ struct NW
 				Links[l][i] = new double[S[l + 1]];
 				for (int o = 0; o < S[l + 1]; o++)
 				{
-					Links[l][i][o] = (rand() / float(RAND_MAX) * 2 - 1) * 1;
-					//if (rand() % 4 == 0) Links[l][i][o] = 0;
+					Links[l][i][o] = gausrand();
+					if (rand() % 2 == 0) Links[l][i][o] = Links[l][i][o] * 0.0001;
 				}
 			}
 		}
@@ -143,15 +130,15 @@ uint32_t size = 1000;
 
 double x = 0, y = 0, a = 0, dx = 0, dy = 0, da = 0, ix = 0, iy = 0, a1 = 0, a2 = 0, p1 = 1, p2 = 1;
 
-const int Deep = 4;
+const int Deep = 3;
 
 int __SS[10]
 {
-	7,
+	15,
+	8,
+	2,
 	6,
-	6,
-	6,
-	2
+	6
 };
 
 sf::CircleShape **Layers;
@@ -166,16 +153,16 @@ sf::CircleShape shape(6.f), unit(6.f), Mid(4.f);
 
 sf::Text Outs[4];
 
-double fps = 60;
+double fps = 45;
 
 
-double ex = inverf(rand() / float(RAND_MAX) * 2 - 1);
-double ey = inverf(rand() / float(RAND_MAX) * 2 - 1) ;
+double ex = gausrand();
+double ey = gausrand();
 
 
 void Train()
 {
-	float dt = 0.1 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.1;
+	float dt = 0.1 + gausrand() * 0.1;
 	if (abs(y) > 3 || abs(x) > 3 || t % 500 == 0)
 	{
 		x = y = dx = dy = ix = iy = 0;
@@ -189,8 +176,8 @@ void Train()
 
 	tx = cos(t * 0.00999216122) + cos((t + 12) * 0.0066228562) * 0.5;
 	ty = sin(t * 0.0098564215366) + cos((t -651) * 0.0077251612165) * 0.5;
-	ex = ex * 0.975 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.025;
-	ey = ey * 0.975 + inverf(rand() / float(RAND_MAX) * 2 - 1) * 0.025;
+	ex = ex * 0.975 + gausrand(0.01);
+	ey = ey * 0.975 + gausrand(0.01);
 	tx += ex;
 	ty += ey;
 	//x = 0;
@@ -199,10 +186,18 @@ void Train()
 	A.N[0][0] = 1;
 	A.N[0][1] = tx - x;
 	A.N[0][2] = ty - y;
-	A.N[0][3] = A.N[A.L - 1][2];
-	A.N[0][4] = A.N[A.L - 1][3];
-	A.N[0][5] = A.N[A.L - 1][4];
-	A.N[0][6] = A.N[A.L - 1][5];
+	A.N[0][3] = dx * 1;
+	A.N[0][4] = dy * 1;
+	A.N[0][5] = A.N[1][0] * 0.1;
+	A.N[0][6] = A.N[1][1] * 0.1;
+	A.N[0][7] = A.N[1][2] * 0.1;
+	A.N[0][8] = A.N[1][3] * 0.1;
+	A.N[0][9] = A.N[1][4] * 0.1;
+	A.N[0][10] = A.N[1][5] * 0.1;
+	A.N[0][11] = A.N[1][6] * 0.1;
+	A.N[0][12] = A.N[1][7] * 0.1;
+	A.N[0][13] = A.N[2][0] * 0.1;
+	A.N[0][14] = A.N[2][1] * 0.1;
 
 	A.Upd();
 
@@ -216,10 +211,6 @@ void Train()
 	iy = iy * 0.9 + (ty - y) * 0.1;
 	A.E[A.L - 1][0] = (tx - x) - dx * dx * dx;
 	A.E[A.L - 1][1] = (ty - y) - dy * dy * dy;
-	A.E[A.L - 1][2] = A.E[0][3] * 0.01 + (dx - A.N[A.L - 1][2]) * 0.01;
-	A.E[A.L - 1][3] = A.E[0][4] * 0.01 + (dy - A.N[A.L - 1][3]) * 0.01;
-	A.E[A.L - 1][4] = A.E[0][5] * 0.01 + (ix - A.N[A.L - 1][4]) * 0.01;
-	A.E[A.L - 1][5] = A.E[0][6] * 0.01 + (iy - A.N[A.L - 1][5]) * 0.01;
 	A.Train();
 
 	t++;
@@ -279,6 +270,27 @@ void TH_Draw()
 		//auto t1 = std::chrono::high_resolution_clock::now();
 		MDraw();
 		std::this_thread::sleep_for(std::chrono::microseconds(delay));
+	}
+}
+
+void Menu()
+{
+	std::cout << "Write delay\n";
+	while (isWindowOpen)
+	{
+		std::string str;
+
+		int T = 0;
+
+		std::cin >> T;
+
+
+		T *= 1000;
+
+		if (T < 1)
+			T = 1;
+
+		delay = T;
 	}
 }
 
@@ -361,6 +373,9 @@ int main()
 	auto t2 = std::chrono::high_resolution_clock::now();
 	double adt = -1;
 	int __GG = 0;
+
+	std::thread th_menu(Menu);
+
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -401,7 +416,8 @@ int main()
 		double dt = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count() * 1000;
 		t1 = std::chrono::high_resolution_clock::now();
 		adt = (adt < 0 ? 4 : adt * 0.9995 + dt * 0.0005);
-		std::cout << int(dt * 1000) << " " << int(adt * 1000) << " " << int(1000.0 / adt) << "        \r";
+		//std::cout << int(dt * 1000) << " " << int(adt * 1000) << " " << int(1000.0 / adt) << "        \r";
+
 
 		Delay(std::max(1000 / fps - dt, 1.0));
 		window.display();
