@@ -12,6 +12,15 @@
 #include <iostream>
 #include <cmath>
 
+
+const double PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679;
+
+double gausrand(double S = 1, double U = 0)
+{
+	return sqrt(-2 * log((1 + rand()) / float(RAND_MAX + 1))) * cos(2 * PI * (rand() / float(RAND_MAX))) * S + U;
+}
+
+
 float A_E[257];
 
 uint16_t xorshift16_xy(uint16_t x, uint16_t y)
@@ -87,6 +96,57 @@ RGBType* hsv2rgb(HSVType* in)
 	return out;
 }
 
+const float
+__V0__ = -1,
+__V1__ = 4 + 4 / sqrt(2),
+__V2__ = 1 / __V1__,
+__V3__ = 1 / sqrt(2) / __V1__;
+
+float
+MG[3][3]
+{
+	-0.25, -0.50, -0.25,
+	 0.00,  0.00,  0.00,
+	+0.25, +0.50, +0.25
+},
+MGX[3][3]
+{
+	-0.25, -0.50, -0.25,
+	 0.00,  0.00,  0.00,
+	+0.25, +0.50, +0.25
+},
+MGY[3][3]
+{
+	-0.25,  0.00, +0.25,
+	-0.50,  0.00, +0.50,
+	-0.25,  0.00, +0.25
+},
+MG1[3][3]
+{
+	-0.25, -0.50, -0.25,
+	+0.25, +0.25, +0.25,
+	+0.00, +0.00, +0.00
+},
+MG2[3][3]
+{
+	-0.00, -0.00, -0.00,
+	-0.25, -0.50, -0.25,
+	+0.25, +0.50, +0.25
+},
+
+ML[3][3]
+{
+	__V3__, __V2__, __V3__,
+	__V2__, __V0__, __V2__,
+	__V3__, __V2__, __V3__
+},
+MF[3][3]
+{
+	__V3__, __V2__, __V3__,
+	__V2__, -__V0__, __V2__,
+	__V3__, __V2__, __V3__
+};
+
 #define E(x) A_E[(unsigned int)(x + 128) % 257] 
 
 const unsigned int randbytelenght = 5333;
@@ -121,7 +181,7 @@ void main()
 	const int
 		Dim = 2,
 		State = 1,
-		Harmonic = 40;
+		Harmonic = 100;
 
 	float
 		A[State][Harmonic],
@@ -132,7 +192,7 @@ void main()
 
 	float BaseHZ[State]
 	{
-		0.15
+		0.1
 	};
 
 	for (int s = 0; s < State; s++)
@@ -143,7 +203,7 @@ void main()
 		{
 			float a = rand() / float(RAND_MAX) * 6.28318530718;
 			float waveLenght = 4 + (h / 4) * 4;
-			float Hz = BaseHZ[s] * (1 + ((h / 4) * 0.25));
+			float Hz = BaseHZ[s] * (1 + ((h / 2) * 0.025));
 			{
 				float T = 0;
 				for (int i = 0; i < 5; i++)
@@ -154,8 +214,8 @@ void main()
 				Hz = Hz * (1 + T);
 			}
 			waveLenght = 1 / Hz;
-			A[s][h] = 1.0 * pow(waveLenght, 1.5);
-			B[s][h] = rand() / float(RAND_MAX) * 6.3;
+			A[s][h] = 1.0 * pow(waveLenght, 2);
+			B[s][h] = rand() / float(RAND_MAX) * 6300;
 			S += A[s][h];
 
 			F[s][h][0] = cos(a) * Hz;
@@ -185,8 +245,9 @@ void main()
 				{
 					v += A[s][h] * sinf(x * F[s][h][0] + y * F[s][h][1] + B[s][h]);
 				}
-				M[x][y][s] = (1 / (1 + exp(v * 8))) * 255 * 1.0;
+				M[x][y][s] = (v + 1) * 0.5 * 255 + randbyte[(x + SIZE * y) % randbytelenght] * 0.00;
 				//M[x][y][s] = 0 + round(tanh((x - SIZE * 0.5) * (x - SIZE * 0.5) * 0.001 + (y - SIZE * 0.5) * (y - SIZE * 0.5) * 0.001) * 255);
+				//M[x][y][s] = 128;
 			}
 
 		}
@@ -194,15 +255,61 @@ void main()
 
 	cv::Mat3b m(SIZE * 4, SIZE * 4);
 
-	for (int x = 0; x < SIZE * 4; x++)
+	for (int x = 0; x < SIZE; x++)
 	{
-		for (int y = 0; y < SIZE * 4; y++)
+		for (int y = 0; y < SIZE; y++)
 		{
-			for (int s = 0; s < State; s++)
-			{
-				m[x][y][s] = M[x / 4][y / 4][0];
 
-			}
+			int C = 1;
+
+			int
+				X[3]
+			{
+				MAX(0, x - C),
+				x,
+				MIN(SIZE - 1, x + C)
+			},
+				Y[3]
+			{
+				MAX(0, y - C),
+				y,
+				MIN(SIZE - 1, y + C)
+			};
+
+			float GX = 0, GY = 0, L = 0;
+
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 3; j++)
+				{
+					float T = M[X[i]][Y[j]][0];
+					GX += MGX[i][j] * T;
+					GY += MGY[i][j] * T;
+				}
+
+			float G = sqrt(GX * GX + GY * GY);
+
+			float A = acos((G != 0 ? GX / G : 0));
+
+			A = (GY > 0 ? A : 2 * CV_PI - A);
+
+			A = A / CV_PI * 180;
+
+			uint16_t __C__[3]
+			{
+				A, tanh(G * 0.1) * 20, M[x][y][0]
+			};
+
+			auto Color = hsv2rgb(__C__);
+			if (G > 0)
+				A = A / CV_PI * 180;
+
+			for (int _x = 0; _x < 4; _x++)
+				for (int _y = 0; _y < 4; _y++)
+					for (int s = 0; s < 3; s++)
+						m[x * 4 + _x][y * 4 + _y][s] = Color[s];
+			delete[] Color;
+
+
 		}
 	}
 
@@ -254,70 +361,21 @@ void main()
 		0
 	};
 
-	{
-		auto BT = buff[0];
-		buff[0] = buff[1];
-		buff[1] = BT;
-	}
 	float
 		D = 1
 		;
 
 	unsigned char Mask[3][3];
 
-	const float
-		__V0__ = -1,
-		__V1__ = 4 + 4 / sqrt(2),
-		__V2__ = 1 / __V1__,
-		__V3__ = 1 / sqrt(2) / __V1__;
 
-	float
-		MG[3][3]
-	{
-		-0.25, -0.50, -0.25,
-		 0.00,  0.00,  0.00,
-		+0.25, +0.50, +0.25
-	},
-		MGX[3][3]
-	{
-		-0.25, -0.50, -0.25,
-		 0.00,  0.00,  0.00,
-		+0.25, +0.50, +0.25
-	}, 
-		MGY[3][3]
-	{
-		-0.25,  0.00, +0.25,
-		-0.50,  0.00, +0.50,
-		-0.25,  0.00, +0.25
-	},
-		MG1[3][3]
-	{
-		-0.25, -0.50, -0.25,
-		+0.25, +0.25, +0.25,
-		+0.00, +0.00, +0.00
-	},
-		MG2[3][3]
-	{
-		-0.00, -0.00, -0.00,
-		-0.25, -0.50, -0.25,
-		+0.25, +0.50, +0.25
-	},
 
-		ML[3][3]
+	for (int I = 0; I < 40; I++)
 	{
-		__V3__, __V2__, __V3__,
-		__V2__, __V0__, __V2__,
-		__V3__, __V2__, __V3__
-	},
-		MF[3][3]
-	{
-		__V3__, __V2__, __V3__,
-		__V2__, -__V0__, __V2__,
-		__V3__, __V2__, __V3__
-	};
-
-	for (int I = 0; I < 100; I++)
-	{
+		{
+			auto BT = buff[0];
+			buff[0] = buff[1];
+			buff[1] = BT;
+		}
 		float MaxSL[3]
 		{
 			0,
@@ -367,139 +425,301 @@ void main()
 
 				uint16_t __C__[3]
 				{
-					A, tanh(G * 1) * 20, buff[0][x][y][0]
+					A, tanh(G * 0.1) * 50, buff[0][x][y][0]
 				};
 
 				auto Color = hsv2rgb(__C__);
-				if(G > 0)
+				if (G > 0)
 					A = A / CV_PI * 180;
 
 				for (int _x = 0; _x < 4; _x++)
 					for (int _y = 0; _y < 4; _y++)
 						for (int s = 0; s < 3; s++)
 							Test[x * 4 + _x][y * 4 + _y][s] = Color[s];
-
+				delete[] Color;
+				buff[1][x][y][0] = 0;
 			}
 		}
-		float
-			Pos[1000][2],
-			V[2]
+		for (int u = 0; u < 10000; u++)
 		{
-			0, 0
-		};
-		Pos[0][0] = (rand() * SIZE) / RAND_MAX;
-		Pos[0][1] = (rand() * SIZE) / RAND_MAX;
-		{
-			int 
-				x = round(Pos[0][0]),
-				y = round(Pos[0][1]);
-			while (buff[0][x][y][0] > 50)
+			float
+				Pos[1000][2],
+				V[2]
 			{
-				Pos[0][0] = (rand() * SIZE) / RAND_MAX;
-				Pos[0][1] = (rand() * SIZE) / RAND_MAX;
-				x = round(Pos[0][0]);
-				y = round(Pos[0][1]);
-			}
-		}
-		float Map[3][3];
-
-		for (int I = 1; I < 100; I++)
-		{
-			int C = 1;
-			int
-				x = round(Pos[I - 1][0]),
-				y = round(Pos[I - 1][1]);
-
-			x = MAX(0, MIN(SIZE - 1, x));
-			y = MAX(0, MIN(SIZE - 1, y));
-
-			int
-				X[3]
-			{
-				MAX(0, x - C),
-				x,
-				MIN(SIZE - 1, x + C)
-			},
-				Y[3]
-			{
-				MAX(0, y - C),
-				y,
-				MIN(SIZE - 1, y + C)
+				0, 0
 			};
-
-			unsigned char Max = buff[0][x][y][0];
-
-			float GX = 0, GY = 0, L = 0;
-
-			float Tx = 0, Ty = 0, S = 0;
-			float Min = Max;
-			for (int i = 0; i < 3; i++)
-				for (int j = 0; j < 3; j++)
-				{
-					float& T = buff[0][X[i]][Y[j]][0];
-					GX += MGX[i][j] * T;
-					GY += MGY[i][j] * T;
-					L += ML[i][j] * T;				
-					Min = MIN(T, Min);
-				}
-
-			for (int i = 0; i < 3; i++)
-				for (int j = 0; j < 3; j++)
-				{
-					float T = buff[0][X[i]][Y[j]][0] - Min;
-					Tx += X[i] * T;
-					Ty += Y[j] * T;
-					S += T;
-					Map[i][j] = buff[0][X[i]][Y[j]][0];
-				}
-
-
-			Tx = Tx / S - Pos[I - 1][0];
-			Ty = Ty / S - Pos[I - 1][1];
-
-			//float TL = sqrt(Tx * Tx + Ty * Ty);
-
-			//Tx /= TL;
-			//Ty /= TL;
-
-			V[0] = GX + 0.1 * Tx * 0.5;
-			V[1] = GY + 0.1 * Ty * 0.5;
-
-			float VL = sqrt(V[0] * V[0] + V[1] * V[1]);
-			if (VL > 1)
+			Pos[0][0] = rand() % SIZE;
+			Pos[0][1] = rand() % SIZE;
 			{
-				V[0] /= VL;
-				V[1] /= VL;
+				int
+					x = round(Pos[0][0]),
+					y = round(Pos[0][1]);
+				while (buff[0][x][y][0] < 40)
+				{
+					Pos[0][0] = rand() % SIZE;
+					Pos[0][1] = rand() % SIZE;
+					x = round(Pos[0][0]);
+					y = round(Pos[0][1]);
+				}
+			}
+
+			for (int I = 1; I < 20; I++)
+			{
+
+				int C = 1;
+				int
+					x = round(Pos[I - 1][0]),
+					y = round(Pos[I - 1][1]);
+
+				x = MAX(0, MIN(SIZE - 1, x));
+				y = MAX(0, MIN(SIZE - 1, y));
+				float& This = buff[0][x][y][0];
+
+				int
+					X[3]
+				{
+					MAX(0, x - C),
+					x,
+					MIN(SIZE - 1, x + C)
+				},
+					Y[3]
+				{
+					MAX(0, y - C),
+					y,
+					MIN(SIZE - 1, y + C)
+				};
+
+				float Max = This;
+				float Min = Max;
+				float Tx = 0, Ty = 0, S = 0;
+
 				for (int i = 0; i < 3; i++)
 					for (int j = 0; j < 3; j++)
 					{
-						buff[1][X[i]][Y[j]][0] = MAX(MAX(buff[0][X[i]][Y[j]][0] - 20, 0), buff[1][X[i]][Y[j]][0] - 3 * MF[i][j]);;
+						float& T = buff[0][X[i]][Y[j]][0];
+						Min = MIN(T, Min);
+						Max = MAX(T, Max);
 					}
 
+				for (int i = 0; i < 3; i++)
+					for (int j = 0; j < 3; j++)
+					{
+						float T = 1 / (buff[0][X[i]][Y[j]][0] - Min + 1.0);
+						Tx += X[i] * T;
+						Ty += Y[j] * T;
+						S += T;
+					}
+
+
+				Tx = Tx / S * 10 - Pos[I - 1][0] * 10 + gausrand(10);
+				Ty = Ty / S * 10 - Pos[I - 1][1] * 10 + gausrand(10);
+
+				//float TL = sqrt(Tx * Tx + Ty * Ty);
+
+				//Tx /= TL;
+				//Ty /= TL;
+
+				V[0] = Tx;
+				V[1] = Ty;
+
+				float VL = sqrt(V[0] * V[0] + V[1] * V[1]);
+				if (VL < 1)
+					break;
+				V[0] /= VL;
+				V[1] /= VL;
+				if (Max - This > 0.1)
+					buff[1][x][y][0] = buff[1][x][y][0] - 1 / float(I * 0.1);
+
+				Pos[I][0] = Pos[I - 1][0] + V[0];
+				Pos[I][1] = Pos[I - 1][1] + V[1];
+
+				Pos[I][0] = MAX(0, MIN(SIZE - 1, Pos[I][0]));
+				Pos[I][1] = MAX(0, MIN(SIZE - 1, Pos[I][1]));
+
+				//uint16_t __C__[3]
+				//{
+				//	I * 1, 255, 255
+				//};
+				//auto Color = hsv2rgb(__C__);
+				//cv::line(Test,
+				//	cv::Point((Pos[I - 1][1]) * 4 + 2, (Pos[I - 1][0]) * 4 + 2),
+				//	cv::Point((Pos[I][1]) * 4 + 2, (Pos[I][0]) * 4 + 2),
+				//	cv::Scalar(Color[0], Color[1], Color[2], 0.5));
+				//delete[] Color;
 			}
-			else if(VL < 0.01)
+
+			Pos[0][0] = rand() % SIZE;
+			Pos[0][1] = rand() % SIZE;
 			{
-				break;
+				int
+					x = round(Pos[0][0]),
+					y = round(Pos[0][1]);
+				while (buff[0][x][y][0] < 100)
+				{
+					Pos[0][0] = rand() % SIZE;
+					Pos[0][1] = rand() % SIZE;
+					x = round(Pos[0][0]);
+					y = round(Pos[0][1]);
+				}
 			}
 
-			Pos[I][0] = Pos[I - 1][0] + V[0];
-			Pos[I][1] = Pos[I - 1][1] + V[1];
-
-			Pos[I][0] = MAX(0, MIN(SIZE - 1, Pos[I][0]));
-			Pos[I][1] = MAX(0, MIN(SIZE - 1, Pos[I][1]));
-
-			uint16_t __C__[3]
+			for (int I = 1; I < 20; I++)
 			{
-				I * 1, 255, 255
-			};
 
-			auto Color = hsv2rgb(__C__);
+				int C = 1;
+				int
+					x = round(Pos[I - 1][0]),
+					y = round(Pos[I - 1][1]);
 
-			cv::line(Test, 
-				cv::Point((Pos[I - 1][1]) * 4 + 2, (Pos[I - 1][0]) * 4 + 2),
-				cv::Point((Pos[I][1]) * 4 + 2, (Pos[I][0]) * 4 + 2),
-				cv::Scalar(Color[0], Color[1], Color[2], 0.5));
+				x = MAX(0, MIN(SIZE - 1, x));
+				y = MAX(0, MIN(SIZE - 1, y));
+				float& This = buff[0][x][y][0];
 
+				int
+					X[3]
+				{
+					MAX(0, x - C),
+					x,
+					MIN(SIZE - 1, x + C)
+				},
+					Y[3]
+				{
+					MAX(0, y - C),
+					y,
+					MIN(SIZE - 1, y + C)
+				};
+
+				float Max = This;
+				float Min = Max;
+				float Tx = 0, Ty = 0, S = 0;
+
+				for (int i = 0; i < 3; i++)
+					for (int j = 0; j < 3; j++)
+					{
+						float& T = buff[0][X[i]][Y[j]][0];
+						Min = MIN(T, Min);
+						Max = MAX(T, Max);
+					}
+
+				for (int i = 0; i < 3; i++)
+					for (int j = 0; j < 3; j++)
+					{
+						float T = (buff[0][X[i]][Y[j]][0] - Min);
+						Tx += X[i] * T;
+						Ty += Y[j] * T;
+						S += T;
+					}
+
+
+				Tx = Tx / S * 10 - Pos[I - 1][0] * 10 + gausrand(1);
+				Ty = Ty / S * 10 - Pos[I - 1][1] * 10 + gausrand(1);
+
+				//float TL = sqrt(Tx * Tx + Ty * Ty);
+
+				//Tx /= TL;
+				//Ty /= TL;
+
+				V[0] = Tx;
+				V[1] = Ty;
+
+				float VL = sqrt(V[0] * V[0] + V[1] * V[1]);
+				if (VL < 1)
+					break;
+				V[0] /= VL;
+				V[1] /= VL;
+				if (Max - This > 0.1)
+					buff[1][x][y][0] = buff[1][x][y][0] + float(I * 0.03);
+
+				Pos[I][0] = Pos[I - 1][0] + V[0];
+				Pos[I][1] = Pos[I - 1][1] + V[1];
+
+				Pos[I][0] = MAX(0, MIN(SIZE - 1, Pos[I][0]));
+				Pos[I][1] = MAX(0, MIN(SIZE - 1, Pos[I][1]));
+
+				//uint16_t __C__[3]
+				//{
+				//	I * 1, 255, 255
+				//};
+				//auto Color = hsv2rgb(__C__);
+				//cv::line(Test,
+				//	cv::Point((Pos[I - 1][1]) * 4 + 2, (Pos[I - 1][0]) * 4 + 2),
+				//	cv::Point((Pos[I][1]) * 4 + 2, (Pos[I][0]) * 4 + 2),
+				//	cv::Scalar(Color[0], Color[1], Color[2], 0.5));
+				//delete[] Color;
+			}
+		}
+
+
+
+
+		for (int x = 0; x < SIZE; x++)
+		{
+			for (int y = 0; y < SIZE; y++)
+			{
+				int
+					X[3]
+				{
+					MAX(0, x - 1),
+					x,
+					MIN(SIZE - 1, x + 1)
+				},
+					Y[3]
+				{
+					MAX(0, y - 1),
+					y,
+					MIN(SIZE - 1, y + 1)
+				};
+				float V = 0;
+				for (int i = 0; i < 3; i++)
+					for (int j = 0; j < 3; j++)
+					{
+						float& T = buff[1][X[i]][Y[j]][0];
+						V += T * MF[i][j];
+					}
+				V = MAX(-1, MIN(0.5, buff[1][x][y][0] * 0.25));
+				V = V + buff[0][x][y][0];
+
+				buff[0][x][y][0] = buff[1][x][y][0] = MAX(0, MIN(255, V));
+			}
+		}
+
+		for (int x = 0; x < SIZE; x++)
+		{
+			for (int y = 0; y < SIZE; y++)
+			{
+				int
+					X[3]
+				{
+					MAX(0, x - 1),
+					x,
+					MIN(SIZE - 1, x + 1)
+				},
+					Y[3]
+				{
+					MAX(0, y - 1),
+					y,
+					MIN(SIZE - 1, y + 1)
+				};
+
+				float& This = buff[0][x][y][0];
+				float Max = This;
+				float Min = Max;
+				float Val = 0, S = 0;
+				for (int i = 0; i < 3; i++)
+					for (int j = 0; j < 3; j++)
+					{
+						float& T = buff[0][X[i]][Y[j]][0];
+						Val += buff[0][X[i]][Y[j]][0] * ML[i][j];
+						Min = MIN(T, Min);
+						Max = MAX(T, Max);
+					}
+				if (Max - This > 0.1 || This < 200)
+					Val = This + Val * (0.9 - This / 300.0);
+				else
+					Val = This + Val * 0.5;
+
+				buff[1][x][y][0] = MAX(0, MIN(255, Val));
+			}
 		}
 
 		for (int s = 0; s < State; s++)
@@ -525,6 +745,65 @@ void main()
 
 		cv::waitKey(1);
 	}
+
+	for (int x = 0; x < SIZE; x++)
+	{
+		for (int y = 0; y < SIZE; y++)
+		{
+
+			int C = 1;
+
+			int
+				X[3]
+			{
+				MAX(0, x - C),
+				x,
+				MIN(SIZE - 1, x + C)
+			},
+				Y[3]
+			{
+				MAX(0, y - C),
+				y,
+				MIN(SIZE - 1, y + C)
+			};
+
+			float GX = 0, GY = 0, L = 0;
+
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 3; j++)
+				{
+					float T = buff[1][X[i]][Y[j]][0];
+					GX += MGX[i][j] * T;
+					GY += MGY[i][j] * T;
+				}
+
+			float G = sqrt(GX * GX + GY * GY);
+
+			float A = acos((G != 0 ? GX / G : 0));
+
+			A = (GY > 0 ? A : 2 * CV_PI - A);
+
+			A = A / CV_PI * 180;
+
+			uint16_t __C__[3]
+			{
+				A, tanh(G * 0.1) * 20, buff[1][x][y][0]
+			};
+
+			auto Color = hsv2rgb(__C__);
+			if (G > 0)
+				A = A / CV_PI * 180;
+
+			for (int _x = 0; _x < 4; _x++)
+				for (int _y = 0; _y < 4; _y++)
+					for (int s = 0; s < 3; s++)
+						m[x * 4 + _x][y * 4 + _y][s] = Color[s];
+			delete[] Color;
+
+
+		}
+	}
+
 
 	cv::imwrite("_d.jpg", m);
 	cv::imshow("d.jpg", m);
