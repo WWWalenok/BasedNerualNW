@@ -181,7 +181,7 @@ void main()
 	const int
 		Dim = 2,
 		State = 1,
-		Harmonic = 100;
+		Harmonic = 60;
 
 	float
 		A[State][Harmonic],
@@ -192,8 +192,10 @@ void main()
 
 	float BaseHZ[State]
 	{
-		0.1
+		0.06
 	};
+
+	const int Inc = 1;
 
 	for (int s = 0; s < State; s++)
 	{
@@ -203,18 +205,18 @@ void main()
 		{
 			float a = rand() / float(RAND_MAX) * 6.28318530718;
 			float waveLenght = 4 + (h / 4) * 4;
-			float Hz = BaseHZ[s] * (1 + ((h / 2) * 0.025));
+			float Hz = BaseHZ[s] * (pow(2, h / 20));
 			{
 				float T = 0;
 				for (int i = 0; i < 5; i++)
 				{
-					T += randdword[__Seed = (__Seed + 1 == randbytelenght ? 0 : __Seed + 1)] / float(UINT16_MAX * 0.5) - 1;
+					T += randdword[__Seed = (__Seed + 7) % randbytelenght] / float(UINT16_MAX * 0.5) - 1;
 				}
 				T = T / 5.0 * 0.5;
 				Hz = Hz * (1 + T);
 			}
 			waveLenght = 1 / Hz;
-			A[s][h] = 1.0 * pow(waveLenght, 2);
+			A[s][h] = 1.0 * pow(waveLenght, 1.5);
 			B[s][h] = rand() / float(RAND_MAX) * 6300;
 			S += A[s][h];
 
@@ -227,17 +229,17 @@ void main()
 		}
 	}
 
-	const int SIZE = 256;
+	const int SIZE = 512;
 
-	unsigned char*** M = new unsigned char** [SIZE];
+	float*** M = new float** [SIZE];
 
 
 	for (int x = 0; x < SIZE; x++)
 	{
-		M[x] = new unsigned char* [SIZE];
+		M[x] = new float* [SIZE];
 		for (int y = 0; y < SIZE; y++)
 		{
-			M[x][y] = new unsigned char[State];
+			M[x][y] = new float[State];
 			for (int s = 0; s < State; s++)
 			{
 				float v = 0;
@@ -245,7 +247,8 @@ void main()
 				{
 					v += A[s][h] * sinf(x * F[s][h][0] + y * F[s][h][1] + B[s][h]);
 				}
-				M[x][y][s] = (v + 1) * 0.5 * 255 + randbyte[(x + SIZE * y) % randbytelenght] * 0.00;
+				M[x][y][s] = v + 0.5;
+				M[x][y][s] = MAX(0, MIN(255, M[x][y][s] * 255));
 				//M[x][y][s] = 0 + round(tanh((x - SIZE * 0.5) * (x - SIZE * 0.5) * 0.001 + (y - SIZE * 0.5) * (y - SIZE * 0.5) * 0.001) * 255);
 				//M[x][y][s] = 128;
 			}
@@ -253,7 +256,7 @@ void main()
 		}
 	}
 
-	cv::Mat3b m(SIZE * 4, SIZE * 4);
+	cv::Mat3b m(SIZE * Inc, SIZE * Inc);
 
 	for (int x = 0; x < SIZE; x++)
 	{
@@ -303,10 +306,10 @@ void main()
 			if (G > 0)
 				A = A / CV_PI * 180;
 
-			for (int _x = 0; _x < 4; _x++)
-				for (int _y = 0; _y < 4; _y++)
+			for (int _x = 0; _x < Inc; _x++)
+				for (int _y = 0; _y < Inc; _y++)
 					for (int s = 0; s < 3; s++)
-						m[x * 4 + _x][y * 4 + _y][s] = Color[s];
+						m[x * Inc + _x][y * Inc + _y][s] = Color[s];
 			delete[] Color;
 
 
@@ -369,7 +372,7 @@ void main()
 
 
 
-	for (int I = 0; I < 40; I++)
+	for (int I = 0; I < 20; I++)
 	{
 		{
 			auto BT = buff[0];
@@ -383,7 +386,7 @@ void main()
 			0
 		};
 
-		cv::Mat3b Test(SIZE * 4, SIZE * 4);
+		cv::Mat3b Test(SIZE * Inc, SIZE * Inc);
 		for (int x = 0; x < SIZE; x++)
 		{
 			for (int y = 0; y < SIZE; y++)
@@ -432,15 +435,15 @@ void main()
 				if (G > 0)
 					A = A / CV_PI * 180;
 
-				for (int _x = 0; _x < 4; _x++)
-					for (int _y = 0; _y < 4; _y++)
+				for (int _x = 0; _x < Inc; _x++)
+					for (int _y = 0; _y < Inc; _y++)
 						for (int s = 0; s < 3; s++)
-							Test[x * 4 + _x][y * 4 + _y][s] = Color[s];
+							Test[x * Inc + _x][y * Inc + _y][s] = Color[s];
 				delete[] Color;
 				buff[1][x][y][0] = 0;
 			}
 		}
-		for (int u = 0; u < 10000; u++)
+		for (int u = 0; u < 0.1 * SIZE * SIZE; u++)
 		{
 			float
 				Pos[1000][2],
@@ -536,32 +539,10 @@ void main()
 				Pos[I][0] = MAX(0, MIN(SIZE - 1, Pos[I][0]));
 				Pos[I][1] = MAX(0, MIN(SIZE - 1, Pos[I][1]));
 
-				//uint16_t __C__[3]
-				//{
-				//	I * 1, 255, 255
-				//};
-				//auto Color = hsv2rgb(__C__);
-				//cv::line(Test,
-				//	cv::Point((Pos[I - 1][1]) * 4 + 2, (Pos[I - 1][0]) * 4 + 2),
-				//	cv::Point((Pos[I][1]) * 4 + 2, (Pos[I][0]) * 4 + 2),
-				//	cv::Scalar(Color[0], Color[1], Color[2], 0.5));
-				//delete[] Color;
 			}
 
 			Pos[0][0] = rand() % SIZE;
 			Pos[0][1] = rand() % SIZE;
-			{
-				int
-					x = round(Pos[0][0]),
-					y = round(Pos[0][1]);
-				while (buff[0][x][y][0] < 100)
-				{
-					Pos[0][0] = rand() % SIZE;
-					Pos[0][1] = rand() % SIZE;
-					x = round(Pos[0][0]);
-					y = round(Pos[0][1]);
-				}
-			}
 
 			for (int I = 1; I < 20; I++)
 			{
@@ -628,24 +609,13 @@ void main()
 				V[0] /= VL;
 				V[1] /= VL;
 				if (Max - This > 0.1)
-					buff[1][x][y][0] = buff[1][x][y][0] + float(I * 0.03);
+					buff[1][x][y][0] = buff[1][x][y][0] + float((I) * 0.1);
 
 				Pos[I][0] = Pos[I - 1][0] + V[0];
 				Pos[I][1] = Pos[I - 1][1] + V[1];
 
 				Pos[I][0] = MAX(0, MIN(SIZE - 1, Pos[I][0]));
 				Pos[I][1] = MAX(0, MIN(SIZE - 1, Pos[I][1]));
-
-				//uint16_t __C__[3]
-				//{
-				//	I * 1, 255, 255
-				//};
-				//auto Color = hsv2rgb(__C__);
-				//cv::line(Test,
-				//	cv::Point((Pos[I - 1][1]) * 4 + 2, (Pos[I - 1][0]) * 4 + 2),
-				//	cv::Point((Pos[I][1]) * 4 + 2, (Pos[I][0]) * 4 + 2),
-				//	cv::Scalar(Color[0], Color[1], Color[2], 0.5));
-				//delete[] Color;
 			}
 		}
 
@@ -676,8 +646,8 @@ void main()
 						float& T = buff[1][X[i]][Y[j]][0];
 						V += T * MF[i][j];
 					}
-				V = MAX(-1, MIN(0.5, buff[1][x][y][0] * 0.25));
-				V = V + buff[0][x][y][0];
+				V = MAX(-1, MIN(0.2, buff[1][x][y][0] * 0.18));
+				V = V * 1.25 + buff[0][x][y][0];
 
 				buff[0][x][y][0] = buff[1][x][y][0] = MAX(0, MIN(255, V));
 			}
@@ -713,10 +683,49 @@ void main()
 						Min = MIN(T, Min);
 						Max = MAX(T, Max);
 					}
-				if (Max - This > 0.1 || This < 200)
-					Val = This + Val * (0.9 - This / 300.0);
-				else
-					Val = This + Val * 0.5;
+				Val = This + Val * (1 - This / 300.0) * 0.5;
+
+				buff[1][x][y][0] = MAX(0, MIN(255, Val));
+			}
+		}
+
+		{
+			auto BT = buff[0];
+			buff[0] = buff[1];
+			buff[1] = BT;
+		}
+
+		for (int x = 0; x < SIZE; x++)
+		{
+			for (int y = 0; y < SIZE; y++)
+			{
+				int
+					X[3]
+				{
+					MAX(0, x - 1),
+					x,
+					MIN(SIZE - 1, x + 1)
+				},
+					Y[3]
+				{
+					MAX(0, y - 1),
+					y,
+					MIN(SIZE - 1, y + 1)
+				};
+
+				float& This = buff[0][x][y][0];
+				float Max = This;
+				float Min = Max;
+				float Val = 0, S = 0;
+				for (int i = 0; i < 3; i++)
+					for (int j = 0; j < 3; j++)
+					{
+						float& T = buff[0][X[i]][Y[j]][0];
+						Val += buff[0][X[i]][Y[j]][0] * ML[i][j];
+						Min = MIN(T, Min);
+						Max = MAX(T, Max);
+					}
+				Val = This + Val * (1 - This / 300.0) * 0.5;
 
 				buff[1][x][y][0] = MAX(0, MIN(255, Val));
 			}
@@ -724,13 +733,13 @@ void main()
 
 		for (int s = 0; s < State; s++)
 			MaxS[s] = MaxSL[s];
-		for (int x = 0; x < SIZE * 4; x++)
+		for (int x = 0; x < SIZE * Inc; x++)
 		{
-			for (int y = 0; y < SIZE * 4; y++)
+			for (int y = 0; y < SIZE * Inc; y++)
 			{
-				m[x][y][0] = buff[1][x / 4][y / 4][0]; // B
-				m[x][y][1] = buff[1][x / 4][y / 4][0]; // G
-				m[x][y][2] = buff[1][x / 4][y / 4][0]; // R
+				m[x][y][0] = buff[1][x / Inc][y / Inc][0]; // B
+				m[x][y][1] = buff[1][x / Inc][y / Inc][0]; // G
+				m[x][y][2] = buff[1][x / Inc][y / Inc][0]; // R
 			}
 		}
 
@@ -745,6 +754,43 @@ void main()
 
 		cv::waitKey(1);
 	}
+
+	float Max_H = 0;
+
+	float Min_H = 1e10;
+
+
+	for (int x = 0; x < SIZE; x++)
+	{
+		for (int y = 0; y < SIZE; y++)
+		{
+			Max_H = MAX(Max_H, buff[1][x][y][0]);
+			Min_H = MIN(Min_H, buff[1][x][y][0]);
+		}
+	}
+
+	for (int x = 0; x < SIZE; x++)
+	{
+		for (int y = 0; y < SIZE; y++)
+		{
+			buff[1][x][y][0] = (buff[1][x][y][0] - Min_H) / (Max_H - Min_H) * 255.9;
+		}
+	}
+
+
+	for (int x = 0; x < SIZE; x++)
+	{
+		for (int y = 0; y < SIZE; y++)
+		{
+
+			for (int _x = 0; _x < Inc; _x++)
+				for (int _y = 0; _y < Inc; _y++)
+					for (int s = 0; s < 3; s++)
+						m[x * Inc + _x][y * Inc + _y][s] = buff[1][x][y][0];
+		}
+	}
+
+	cv::imwrite("result_h_map.jpg", m);
 
 	for (int x = 0; x < SIZE; x++)
 	{
@@ -787,17 +833,17 @@ void main()
 
 			uint16_t __C__[3]
 			{
-				A, tanh(G * 0.1) * 20, buff[1][x][y][0]
+				A, tanh(G * 0.1) * 40, buff[1][x][y][0]
 			};
 
 			auto Color = hsv2rgb(__C__);
 			if (G > 0)
 				A = A / CV_PI * 180;
 
-			for (int _x = 0; _x < 4; _x++)
-				for (int _y = 0; _y < 4; _y++)
+			for (int _x = 0; _x < Inc; _x++)
+				for (int _y = 0; _y < Inc; _y++)
 					for (int s = 0; s < 3; s++)
-						m[x * 4 + _x][y * 4 + _y][s] = Color[s];
+						m[x * Inc + _x][y * Inc + _y][s] = Color[s];
 			delete[] Color;
 
 
@@ -805,7 +851,7 @@ void main()
 	}
 
 
-	cv::imwrite("_d.jpg", m);
+	cv::imwrite("result_vis.jpg", m);
 	cv::imshow("d.jpg", m);
 	cv::waitKey(1);
 
