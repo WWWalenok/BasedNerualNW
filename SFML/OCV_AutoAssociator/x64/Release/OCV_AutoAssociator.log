@@ -1,0 +1,36 @@
+﻿  Start.cpp
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(14): warning C4244: аргумент: преобразование "double" в "float", возможна потеря данных
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(248): warning C4305: аргумент: усечение из "double" в "float"
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(255): warning C4244: =: преобразование "_Tp" в "_Tp", возможна потеря данных
+          with
+          [
+              _Tp=float
+          ]
+          and
+          [
+              _Tp=uchar
+          ]
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(272): warning C4244: аргумент: преобразование "double" в "float", возможна потеря данных
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(285): warning C4244: =: преобразование "_Tp" в "_Tp", возможна потеря данных
+          with
+          [
+              _Tp=float
+          ]
+          and
+          [
+              _Tp=uchar
+          ]
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(87): warning C4244: =: преобразование "double" в "float", возможна потеря данных
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(83): note: при компиляции функции-члена "<Нет данных>" класса класс <Нет данных>
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(200): note: выполняется компиляция ссылки на экземпляр шаблон функции "Asociator_trainer<7,5>::Asociator_trainer(void)"
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(200): note: выполняется компиляция ссылки на экземпляр шаблон класс "Asociator_trainer<7,5>"
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(28): warning C4244: =: преобразование "double" в "float", возможна потеря данных
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(24): note: при компиляции функции-члена "<Нет данных>" класса класс <Нет данных>
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(198): note: выполняется компиляция ссылки на экземпляр шаблон функции "Asociator<7,5>::Asociator(void)"
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(198): note: выполняется компиляция ссылки на экземпляр шаблон класс "Asociator<7,5>"
+  Создание кода
+  1 of 64 functions ( 1.6%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Создание кода завершено
+  OCV_AutoAssociator.vcxproj -> C:\Bin\OCV_AutoAssociator\x64\Release\OCV_AutoAssociator.exe

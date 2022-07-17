@@ -1,0 +1,13 @@
+﻿  Start.cpp
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(213): warning C4305: аргумент: усечение из "double" в "float"
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(72): warning C4244: =: преобразование "double" в "float", возможна потеря данных
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(68): note: при компиляции функции-члена "<Нет данных>" класса класс <Нет данных>
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(175): note: выполняется компиляция ссылки на экземпляр шаблон функции "Asociator_trainer<5,10>::Asociator_trainer(void)"
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(175): note: выполняется компиляция ссылки на экземпляр шаблон класс "Asociator_trainer<5,10>"
+e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(18): warning C4244: =: преобразование "double" в "float", возможна потеря данных
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(14): note: при компиляции функции-члена "<Нет данных>" класса класс <Нет данных>
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(173): note: выполняется компиляция ссылки на экземпляр шаблон функции "Asociator<5,10>::Asociator(void)"
+  e:\repos\wwwalenok\basednerualnw\sfml\ocv_autoassociator\start.cpp(173): note: выполняется компиляция ссылки на экземпляр шаблон класс "Asociator<5,10>"
+LINK : warning LNK4075: не учитывается "/INCREMENTAL" из-за спецификации "/LTCG"
+  LINK : указан параметр /LTCG, но не требуется создание кода; удалите /LTCG из командной строки компоновки для повышения производительности компоновщика
+  OCV_AutoAssociator.vcxproj -> E:\Repos\WWWalenok\BasedNerualNW\SFML\x64\Debug\OCV_AutoAssociator.exe

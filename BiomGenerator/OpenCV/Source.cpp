@@ -12,28 +12,9 @@
 #include <iostream>
 #include <cmath>
 
-
-const double PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679;
-
-double gausrand(double S = 1, double U = 0)
-{
-	return sqrt(-2 * log((1 + rand()) / float(RAND_MAX + 1))) * cos(2 * PI * (rand() / float(RAND_MAX))) * S + U;
-}
-
+#include "BaseGenerator.h"
 
 float A_E[257];
-
-uint16_t xorshift16_xy(uint16_t x, uint16_t y)
-{
-	y = ((y & 0xff00) >> 8) ^ ((y & 0x00ff) << 8);
-	x = ((x & 0xf0f0) >> 4) ^ ((x & 0x0f0f) << 4);
-	uint16_t t = x ^ y;
-	t = ((t & 0xfff0) >> 4) ^ ((t & 0x000f) << 12);
-	t ^= t >> 3;
-	t ^= t << 5;
-	uint16_t u = (x ^ y);
-	return (y ^ (u << 3)) ^ t;
-}
 
 template<typename HSVType = uint16_t, typename RGBType = uint8_t, HSVType MAX_H = 360/*MAX_H % 6 == 0*/, HSVType MAX_S = 255, HSVType MAX_V = 255, RGBType MAX_RGB = 255 >
 RGBType* hsv2rgb(HSVType* in)
@@ -96,69 +77,6 @@ RGBType* hsv2rgb(HSVType* in)
 	return out;
 }
 
-const float
-__V0__ = -1,
-__V1__ = 4 + 4 / sqrt(2),
-__V2__ = 1 / __V1__,
-__V3__ = 1 / sqrt(2) / __V1__;
-
-float
-MG[3][3]
-{
-	-0.25, -0.50, -0.25,
-	 0.00,  0.00,  0.00,
-	+0.25, +0.50, +0.25
-},
-MGX[3][3]
-{
-	-0.25, -0.50, -0.25,
-	 0.00,  0.00,  0.00,
-	+0.25, +0.50, +0.25
-},
-MGY[3][3]
-{
-	-0.25,  0.00, +0.25,
-	-0.50,  0.00, +0.50,
-	-0.25,  0.00, +0.25
-},
-MG1[3][3]
-{
-	-0.25, -0.50, -0.25,
-	+0.25, +0.25, +0.25,
-	+0.00, +0.00, +0.00
-},
-MG2[3][3]
-{
-	-0.00, -0.00, -0.00,
-	-0.25, -0.50, -0.25,
-	+0.25, +0.50, +0.25
-},
-
-ML[3][3]
-{
-	__V3__, __V2__, __V3__,
-	__V2__, __V0__, __V2__,
-	__V3__, __V2__, __V3__
-},
-MF[3][3]
-{
-	__V3__, __V2__, __V3__,
-	__V2__, -__V0__, __V2__,
-	__V3__, __V2__, __V3__
-};
-
-#define E(x) A_E[(unsigned int)(x + 128) % 257] 
-
-const unsigned int randbytelenght = 5333;
-
-uint8_t randbyte[randbytelenght];
-
-uint16_t randdword[randbytelenght];
-
-
-const int Size = 4;
-
-inline
 float _F(float x)
 {
 	float T = -x / (0.5 + x * x / 200.0) + x;
@@ -167,8 +85,71 @@ float _F(float x)
 		T;
 }
 
-void main()
+void main_1()
 {
+
+	const float
+		__V0__ = -1,
+		__V1__ = 4 + 4 / sqrt(2),
+		__V2__ = 1 / __V1__,
+		__V3__ = 1 / sqrt(2) / __V1__;
+
+	float
+		MG[3][3]
+	{
+		-0.25, -0.50, -0.25,
+		0.00,  0.00,  0.00,
+		+0.25, +0.50, +0.25
+	},
+		MGX[3][3]
+	{
+		-0.25, -0.50, -0.25,
+		0.00,  0.00,  0.00,
+		+0.25, +0.50, +0.25
+	},
+		MGY[3][3]
+	{
+		-0.25,  0.00, +0.25,
+		-0.50,  0.00, +0.50,
+		-0.25,  0.00, +0.25
+	},
+		MG1[3][3]
+	{
+		-0.25, -0.50, -0.25,
+		+0.25, +0.25, +0.25,
+		+0.00, +0.00, +0.00
+	},
+		MG2[3][3]
+	{
+		-0.00, -0.00, -0.00,
+		-0.25, -0.50, -0.25,
+		+0.25, +0.50, +0.25
+	},
+
+		ML[3][3]
+	{
+		__V3__, __V2__, __V3__,
+		__V2__, __V0__, __V2__,
+		__V3__, __V2__, __V3__
+	},
+		MF[3][3]
+	{
+		__V3__, __V2__, __V3__,
+		__V2__, -__V0__, __V2__,
+		__V3__, __V2__, __V3__
+	};
+
+#define E(x) A_E[(unsigned int)(x + 128) % 257] 
+
+	const unsigned int randbytelenght = 5333;
+
+	uint8_t randbyte[randbytelenght];
+
+	uint16_t randdword[randbytelenght];
+
+
+	const int Size = 4;
+
 	for (int i = 0; i < randbytelenght; i++)
 	{
 		randbyte[i] = rand();
@@ -855,4 +836,45 @@ void main()
 	cv::imshow("d.jpg", m);
 	cv::waitKey(1);
 
+}
+
+
+
+
+
+
+void main()
+{
+	const size_t size = 1024;
+
+	BaseGenerator A = BaseGenerator(size);
+
+	cv::Mat1b test(size, size);
+
+	A.Init(3, 40, 2, 50, 0, 20);
+
+	for(unsigned int i = 0; i < 1000; i++)
+	{
+		float _max = -1E5, _min = -_max;
+		for(int i = 0; i < size; i++) for(int j = 0; j < size; j++)
+		{
+			_max = MAX(_max, A.map[i][j]);
+			_min = MIN(_min, A.map[i][j]);
+		}
+		for(int i = 0; i < size; i++) for(int j = 0; j < size; j++)
+		{
+			test[i][j] = 2 + 250 * (A.map[i][j] - _min) / (_max - _min);
+		}
+
+		std::cout<< i << " : " << _min << " -- " << _max << "      \r";
+
+		cv::imshow("teat", test);
+
+		cv::imwrite("D:\\!!!\\T\\I_" + std::to_string(i) + ".jpg", test);
+
+		cv::waitKey(1);
+
+		A.SymulateDrop(1000, 1);
+
+	}
 }

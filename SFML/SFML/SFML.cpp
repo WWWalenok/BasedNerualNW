@@ -186,18 +186,18 @@ void Train()
 	A.N[0][0] = 1;
 	A.N[0][1] = tx - x;
 	A.N[0][2] = ty - y;
-	A.N[0][3] = dx * 1;
-	A.N[0][4] = dy * 1;
-	A.N[0][5] = A.N[1][0] * 0.1;
-	A.N[0][6] = A.N[1][1] * 0.1;
-	A.N[0][7] = A.N[1][2] * 0.1;
-	A.N[0][8] = A.N[1][3] * 0.1;
-	A.N[0][9] = A.N[1][4] * 0.1;
-	A.N[0][10] = A.N[1][5] * 0.1;
-	A.N[0][11] = A.N[1][6] * 0.1;
-	A.N[0][12] = A.N[1][7] * 0.1;
-	A.N[0][13] = A.N[2][0] * 0.1;
-	A.N[0][14] = A.N[2][1] * 0.1;
+	A.N[0][3] = dx * 0;
+	A.N[0][4] = dy * 0;
+	A.N[0][5] = A.N[1][0] * 1;
+	A.N[0][6] = A.N[1][1] * 1;
+	A.N[0][7] = A.N[1][2] * 1;
+	A.N[0][8] = A.N[1][3] * 0.0;
+	A.N[0][9] = A.N[1][4] * 0.0;
+	A.N[0][10] = A.N[1][5] * 0.0;
+	A.N[0][11] = A.N[1][6] * 0.0;
+	A.N[0][12] = A.N[1][7] * 0.0;
+	A.N[0][13] = A.N[2][0] * 0.0;
+	A.N[0][14] = A.N[2][1] * 0.0;
 
 	A.Upd();
 
@@ -209,8 +209,8 @@ void Train()
 	y += dy * 0.1;
 	ix = ix * 0.9 + (tx - x) * 0.1;
 	iy = iy * 0.9 + (ty - y) * 0.1;
-	A.E[A.L - 1][0] = (tx - x) - dx * dx * dx;
-	A.E[A.L - 1][1] = (ty - y) - dy * dy * dy;
+	A.E[A.L - 1][0] = (tx - x) - dx * 0.1;
+	A.E[A.L - 1][1] = (ty - y) - dy * 0.1;
 	A.Train();
 
 	t++;
@@ -261,7 +261,7 @@ void MDraw()
 
 bool isWindowOpen = true;
 
-uint32_t delay = 1;
+uint32_t delay = 0;
 
 void TH_Draw()
 {
@@ -269,7 +269,8 @@ void TH_Draw()
 	{
 		//auto t1 = std::chrono::high_resolution_clock::now();
 		MDraw();
-		std::this_thread::sleep_for(std::chrono::microseconds(delay));
+		if(delay > 0)
+			std::this_thread::sleep_for(std::chrono::microseconds(delay));
 	}
 }
 
@@ -285,10 +286,10 @@ void Menu()
 		std::cin >> T;
 
 
-		T *= 1000;
+		T *= 10;
 
-		if (T < 1)
-			T = 1;
+		if (T < 0)
+			T = 0;
 
 		delay = T;
 	}
