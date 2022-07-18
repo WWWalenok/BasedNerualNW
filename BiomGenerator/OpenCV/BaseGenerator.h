@@ -27,19 +27,33 @@ double gausrand(double S = 1, double U = 0)
 	return sqrt(-2 * log((1 + rand()) / float(RAND_MAX + 1))) * cos(2 * PI * (rand() / float(RAND_MAX))) * S + U;
 }
 
+int seed = 0;
+const int arS = 5059;
+float *gaus_rand_arr = new float[arS];
+
+float arrgsrnd()
+{
+	return gaus_rand_arr[seed = (seed + 1) % arS];
+}
 
 
 struct BaseGenerator
 {
+
 	int size = 100;
 	float **map;
 	float **buff;
 	float **buff_dop;
 
-	float dt = 0.001;
+	float dt = 0.01;
 
 	BaseGenerator(int _size = 100)
 	{
+		for(int i = 0; i < arS; i++)
+		{
+			gaus_rand_arr[i] = gausrand();
+		}
+
 
 		size = _size;
 		map = new float *[size];
@@ -69,65 +83,20 @@ struct BaseGenerator
 
 	inline float GetVal(float **map, float x, float y)
 	{
-		int
-			ix = x,
-			iy = y;
+		x = MAX(0, MIN(size - 1, x));
+		y = MAX(0, MIN(size - 1, y));
 
-		ix = MAX(0, MIN(size - 1, ix));
-		iy = MAX(0, MIN(size - 1, iy));
-
-
-		return map[ix][iy];
-
-		float
-			fx = x - ix,
-			fy = y - iy;
-
-		int m[2][2]
-		{
-			{ix, MIN(ix + 1, size - 1)},
-			{iy, MIN(iy + 1, size - 1)}
-		};
-
-		float ret = 0
-			+ map[m[0][0]][m[1][0]] * (1 - fx) * (1 - fy)
-			+ map[m[0][1]][m[1][0]] * (fx) * (1 - fy)
-			+ map[m[0][0]][m[1][1]] * (1 - fx) * (fy)
-			+map[m[0][1]][m[1][1]] * (fx) * (fy)
-			;
-
-		return ret;
+		return map[int(x)][int(y)];
 	}
 
 	inline void AddVal(float **map, float x, float y, float val)
 	{
 
-		int
-			ix = x,
-			iy = y;
+		x = MAX(0, MIN(size - 1, x));
+		y = MAX(0, MIN(size - 1, y));
 
-		ix = MAX(0, MIN(size - 1, ix));
-		iy = MAX(0, MIN(size - 1, iy));
-
-		map[ix][iy] += val;
+		map[int(x)][int(y)] += val;
 		return;
-
-		float
-			fx = x - ix,
-			fy = y - iy;
-
-		int m[2][2]
-		{
-			{ix, MIN(ix + 1, size - 1)},
-			{iy, MIN(iy + 1, size - 1)}
-		};
-
-
-		map[m[0][0]][m[1][0]] += val * (1 - fx) * (1 - fy);
-		map[m[0][1]][m[1][0]] += val * (fx) * (1 - fy);
-		map[m[0][0]][m[1][1]] += val * (1 - fx) * (fy);
-		map[m[0][1]][m[1][1]] += val * (fx) * (fy);
-
 	}
 
 	inline float GetDX(float **map, float x, float y)
@@ -200,12 +169,12 @@ struct BaseGenerator
 	struct DropElement
 	{
 		float
-			flow = 0.05,
-			base_c_max = 1,
-			c_max_v_multy = 10,
+			flow = 0.02,
+			base_c_max = 0.5,
+			c_max_v_multy = 2,
 			h_multy = 50,
-			flow_v_multy = 0,
-			fric = 1
+			flow_v_multy = -0.01,
+			fric = 0.4
 			;
 
 		float
@@ -215,7 +184,8 @@ struct BaseGenerator
 			vy = 0,
 			c_max = 0,
 			c = 0,
-			m = 100
+			m = 1,
+			t = 0
 			;
 
 		void Ubdate(BaseGenerator *parrent)
@@ -224,10 +194,21 @@ struct BaseGenerator
 			float **buff = parrent->buff;
 			float &dt = parrent->dt;
 
+			if(t == 0 && parrent->GetDX(map, x, y) == 0 && parrent->GetDY(map, x, y))
+			{
+				m = -10000000;
+			}
+
+			t += dt;
+
+			if(t > 50)
+				m = -10000000;
+
 			float v = sqrtf(vx * vx + vy * vy);
 
-			m = m - dt * m * (flow + v * flow_v_multy);
-			if(m < 0.1)
+			m =  fmin(m, m - dt * m * (flow + v * flow_v_multy));
+
+			if(m < 0.01)
 				m = -1;
 
 
@@ -242,8 +223,16 @@ struct BaseGenerator
 				delta_c = -c;
 			c = c + delta_c;
 
-			vx = vx - dt * parrent->GetDX(map, x, y) * h_multy - dt * vx * fric + gausrand(0.1);
-			vy = vy - dt * parrent->GetDY(map, x, y) * h_multy - dt * vy * fric + gausrand(0.1);
+			vx -= dt * parrent->GetDX(map, x, y) * h_multy;
+			vy -=  dt * parrent->GetDY(map, x, y) * h_multy;
+
+
+			vx -=  dt * vx * fric;
+			vy -=  dt * vy * fric;
+
+			vx += arrgsrnd() * dt * 10;
+			vy += arrgsrnd() * dt * 10;
+
 
 			x = x + dt * vx;
 			y = y + dt * vy;
@@ -308,60 +297,69 @@ struct BaseGenerator
 					stack[i].Ubdate(this);
 				}
 			}
-			float _max = 100000;
-			for(int k = 0; k < 20 || _max > 30; k++)
+			float _max = 0;
+			for(int k = 0; k < 20 || _max > 5; k++)
 			{
+				for(int i = 0; i < size; i++)
+					for(int j = 0; j < size; j++)
+						buff_dop[i][j] = buff[i][j];
+
 				_max = 0;
 				for(int i = 0; i < size; i++)
 					for(int j = 0; j < size; j++)
 					{
-						float k = fabs(buff[i][j]);
-						_max = fmax(k, _max);
-
-						if(k < 3)
-							continue;
-
-						int
-							X[3]
+						float h = fabs(buff[i][j]);
+						_max = fmax(h, _max);
+						if(h > 0.0001 && !(h < 20 / float(k) && k >= 20))
 						{
-							MAX(0, i - 1),
-							i,
-							MIN(size - 1, i + 1)
-						},
-							Y[3]
-						{
-							MAX(0, j - 1),
-							j,
-							MIN(size - 1, j + 1)
-						};
-						buff_dop[i][j] =
-							buff[i][j] + 0.1 *
-							(
-							-4 * buff[X[1]][Y[1]]
-							+ buff[X[0]][Y[1]]
-							+ buff[X[2]][Y[1]]
-							+ buff[X[1]][Y[0]]
-							+ buff[X[1]][Y[2]]
-							)
-							;
+
+							int
+								X[3]
+							{
+								MAX(0, i - 1),
+								i,
+								MIN(size - 1, i + 1)
+							},
+								Y[3]
+							{
+								MAX(0, j - 1),
+								j,
+								MIN(size - 1, j + 1)
+							};
+							buff_dop[X[1]][Y[1]] += 0.1 * (-4 * buff[X[1]][Y[1]]);
+							buff_dop[X[0]][Y[1]] += 0.1 * (buff[X[1]][Y[1]]);
+							buff_dop[X[2]][Y[1]] += 0.1 * (buff[X[1]][Y[1]]);
+							buff_dop[X[1]][Y[0]] += 0.1 * (buff[X[1]][Y[1]]);
+							buff_dop[X[1]][Y[2]] += 0.1 * (buff[X[1]][Y[1]]);
+
+						}
 					}
+
 				auto t = buff;
 				buff = buff_dop;
 				buff_dop = t;
 			}
 			for(int i = 0; i < size; i++)
 				for(int j = 0; j < size; j++) if(buff[i][j] != 0)
-					map[i][j] += buff[i][j] * 0.1;
+					map[i][j] += buff[i][j] * 1;
 		}
 
 		delete[] stack;
 
-		for(int i = 0; i < size; i++)
-			for(int j = 0; j < size; j++)
-				buff_dop[i][j] = map[i][j];
-
-		for(int k = 0; k < 5; k++)
+		if(is_need_delete_base)
 		{
+			delete base;
+		}
+	}
+
+	void Eroze(int steep)
+	{
+		for(int k = 0; k < steep; k++)
+		{
+			for(int i = 0; i < size; i++)
+				for(int j = 0; j < size; j++)
+					buff_dop[i][j] = map[i][j];
+
 			for(int i = 0; i < size; i++)
 				for(int j = 0; j < size; j++)
 				{
@@ -390,14 +388,45 @@ struct BaseGenerator
 						)
 						;
 				}
-			auto t = buff;
-			buff = buff_dop;
-			buff_dop = t;
 		}
+	}
 
-		if(is_need_delete_base)
+	void Expoze(int steep)
+	{
+		for(int k = 0; k < steep; k++)
 		{
-			delete base;
+			for(int i = 0; i < size; i++)
+				for(int j = 0; j < size; j++)
+					buff_dop[i][j] = map[i][j];
+
+			for(int i = 0; i < size; i++)
+				for(int j = 0; j < size; j++)
+				{
+
+					int
+						X[3]
+					{
+						MAX(0, i - 1),
+						i,
+						MIN(size - 1, i + 1)
+					},
+						Y[3]
+					{
+						MAX(0, j - 1),
+						j,
+						MIN(size - 1, j + 1)
+					};
+					map[i][j] =
+						buff_dop[i][j] + 0.1 *
+						(
+						4 * buff_dop[X[1]][Y[1]]
+						- buff_dop[X[0]][Y[1]]
+						- buff_dop[X[2]][Y[1]]
+						- buff_dop[X[1]][Y[0]]
+						- buff_dop[X[1]][Y[2]]
+						)
+						;
+				}
 		}
 	}
 };
